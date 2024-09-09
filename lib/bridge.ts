@@ -2,8 +2,8 @@
  * Copyright SeatGeek
  * Licensed under the terms of the Apache-2.0 license. See LICENSE file in project root for terms.
  */
-import * as fs from 'fs-extra';
-import { join } from 'path';
+import * as fs from "fs-extra";
+import { join } from "path";
 
 interface GoBridge {
   merge: (a: string, b: string) => Promise<string>;
@@ -11,7 +11,6 @@ interface GoBridge {
 
 declare const WebAssembly: any;
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 const jsRoot: Record<string, Function> = {};
 
 function sleep() {
@@ -46,7 +45,7 @@ function goBridge(getBytes: Promise<Buffer>) {
 
         if (!(key in jsRoot)) {
           throw new Error(
-            `There is nothing defined with the name "${key.toString()}"`
+            `There is nothing defined with the name "${key.toString()}"`,
           );
         }
 
