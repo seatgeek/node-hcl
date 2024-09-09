@@ -7,7 +7,6 @@ package hcl
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -108,28 +107,6 @@ func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwri
 	return outBlocks
 }
 
-func parseFileSafe(path string) (*hclwrite.File, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return hclwrite.NewFile(), nil
-		}
-		return nil, err
-	}
-	defer file.Close()
-
-	return parseFile(path)
-}
-
-func parseFile(path string) (*hclwrite.File, error) {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseBytes(bytes)
-}
-
 func parseBytes(bytes []byte) (*hclwrite.File, error) {
 	sourceHclFile, d := hclwrite.ParseConfig(bytes, "", hcl.InitialPos)
 	if d.HasErrors() {
@@ -165,94 +142,4 @@ func Merge(a string, b string) (string, error) {
 	}
 
 	return buf.String(), nil
-}
-
-func MergeWrite(a string, b string, outPath string) error {
-	aBytes := []byte(a)
-	bBytes := []byte(b)
-
-	// safe parse the HCL files
-	aFile, err := parseBytes(aBytes)
-	if err != nil {
-		return err
-	}
-
-	bFile, err := parseBytes(bBytes)
-	if err != nil {
-		return err
-	}
-
-	// merge the blocks from the HCL files
-	out := merge(aFile, bFile)
-
-	// create the output file
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
-	}
-	defer outFile.Close()
-
-	// write the HCL content to the file
-	_, err = out.WriteTo(outFile)
-	if err != nil {
-		return fmt.Errorf("error writing HCL to file: %w", err)
-	}
-
-	return nil
-}
-
-func MergeFiles(aPath string, bPath string) (string, error) {
-	// safe parse the HCL files
-	aFile, err := parseFileSafe(aPath)
-	if err != nil {
-		return "", err
-	}
-
-	bFile, err := parseFileSafe(bPath)
-	if err != nil {
-		return "", err
-	}
-
-	// merge the blocks from the HCL files
-	out := merge(aFile, bFile)
-
-	// out to buffer
-	var buf bytes.Buffer
-	_, err = out.WriteTo(&buf)
-	if err != nil {
-		return "", fmt.Errorf("error writing HCL to file: %w", err)
-	}
-
-	return buf.String(), nil
-}
-
-func MergeFilesWrite(aPath string, bPath string, outPath string) error {
-	// safe parse the HCL files
-	aFile, err := parseFileSafe(aPath)
-	if err != nil {
-		return err
-	}
-
-	bFile, err := parseFileSafe(bPath)
-	if err != nil {
-		return err
-	}
-
-	// merge the blocks from the HCL files
-	out := merge(aFile, bFile)
-
-	// create the output file
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
-	}
-	defer outFile.Close()
-
-	// write the HCL content to the file
-	_, err = out.WriteTo(outFile)
-	if err != nil {
-		return fmt.Errorf("error writing HCL to file: %w", err)
-	}
-
-	return nil
 }
