@@ -1,0 +1,7 @@
+!*.js
+*.ts
+!*.d.ts
+test
+.yarn
+dist
+Makefile
