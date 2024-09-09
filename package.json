@@ -32,7 +32,6 @@
   },
   "dependencies": {
     "crypto": "^1.0.1",
-    "fs-extra": "^11.2.0",
-    "zlib": "^1.0.5"
+    "fs-extra": "^11.2.0"
   }
 }

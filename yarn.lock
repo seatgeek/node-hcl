@@ -868,7 +868,6 @@ __metadata:
     ts-jest: "npm:29.2.4"
     typescript: "npm:5.2.2"
     typescript-eslint: "npm:^8.5.0"
-    zlib: "npm:^1.0.5"
   languageName: unknown
   linkType: soft
 
@@ -4470,12 +4469,5 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10c0/dceb44c28578b31641e13695d200d34ec4ab3966a5729814d5445b194933c096b7ced71494ce53a0e8820685d1d010df8b2422e5bf2cdea7e469d97ffbea306f
-  languageName: node
-  linkType: hard
-
-"zlib@npm:^1.0.5":
-  version: 1.0.5
-  resolution: "zlib@npm:1.0.5"
-  checksum: 10c0/34bd33f4fdcda34f57a1ab628ceb423bdf8ef07290f46cd944eedd9a66458cc24ccf3c770da73dc0f8d28016607d861290ac5c53d49113177f7c321838df2913
   languageName: node
   linkType: hard
