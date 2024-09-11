@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"syscall/js"
 
-	"github.com/seatgeek/nodehcl/hcl"
+	"github.com/seatgeek/node-hcl/hcl"
 )
 
 var jsGlobal js.Value

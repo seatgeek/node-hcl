@@ -7,7 +7,7 @@ package hcl_test
 import (
 	"testing"
 
-	"github.com/seatgeek/nodehcl/hcl"
+	"github.com/seatgeek/node-hcl/hcl"
 	"github.com/stretchr/testify/assert"
 )
 

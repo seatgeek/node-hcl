@@ -134,7 +134,7 @@ func Merge(a string, b string) (string, error) {
 	// merge the blocks from the HCL files
 	out := merge(aFile, bFile)
 
-	// out to buffer
+	// write file to buffer
 	var buf bytes.Buffer
 	_, err = out.WriteTo(&buf)
 	if err != nil {

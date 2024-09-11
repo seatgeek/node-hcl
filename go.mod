@@ -1,4 +1,4 @@
-module github.com/seatgeek/nodehcl
+module github.com/seatgeek/node-hcl
 
 go 1.23.1
 
