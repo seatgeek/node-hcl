@@ -1,8 +1,8 @@
 {
-  "name": "@seatgeek/nodehcl",
+  "name": "@seatgeek/node-hcl",
   "version": "1.0.0",
   "packageManager": "yarn@4.1.1",
-  "main": "lib/index.ts",
+  "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "private": true,
   "engines": {

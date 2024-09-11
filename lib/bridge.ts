@@ -2,6 +2,9 @@
  * Copyright SeatGeek
  * Licensed under the terms of the Apache-2.0 license. See LICENSE file in project root for terms.
  */
+
+// Inspired by
+// https://github.com/hashicorp/terraform-cdk
 import * as fs from "fs-extra";
 import { join } from "path";
 
