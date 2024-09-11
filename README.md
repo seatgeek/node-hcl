@@ -1,6 +1,6 @@
 # node-hcl
 
-This WebAssembly wrapper provides a convenient way to use the HCL (HashiCorp Configuration Language) library. It allows you to parse and merge HCL files, making it easier to work with configuration files in your Node applications.
+This WebAssembly wrapper for https://github.com/hashicorp/hcl provides a convenient way to use the HCL (HashiCorp Configuration Language) library in your Node applications.
 
 ## Usage
 
