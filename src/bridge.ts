@@ -7,6 +7,7 @@
 // https://github.com/hashicorp/terraform-cdk
 import * as fs from "fs-extra";
 import { join } from "path";
+import { gunzipSync } from 'zlib';
 
 interface GoBridge {
   merge: (a: string, b: string) => Promise<string>;
@@ -26,7 +27,7 @@ function goBridge(getBytes: Promise<Buffer>) {
   let ready = false;
 
   async function init() {
-    await import(`../wasm/bridge_wasm_exec.js`);
+    await import(`./wasm/bridge_wasm_exec.js`);
     const go = new (global as any).Go();
     const bytes = await getBytes;
     const result = await WebAssembly.instantiate(bytes, go.importObject);
@@ -75,7 +76,7 @@ function goBridge(getBytes: Promise<Buffer>) {
 }
 
 const loadWasm = async () => {
-  return await fs.readFile(join(__dirname, "..", "main.wasm"));
+  return gunzipSync(await fs.readFile(join(__dirname, "wasm/main.wasm.gz")));
 };
 
 export const wasm = goBridge(loadWasm());

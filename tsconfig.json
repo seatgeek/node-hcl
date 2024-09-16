@@ -27,8 +27,9 @@
     "incremental": true,
     "esModuleInterop": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "outDir": "dist",
   },
-  "include": ["lib/**/*.ts", "test/**/*.ts"],
-  "exclude": ["node_modules", "**/*.d.ts", "wasm/*"]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "**/*.d.ts"]
 }
