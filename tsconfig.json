@@ -28,7 +28,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "outDir": "dist",
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "**/*.d.ts"]

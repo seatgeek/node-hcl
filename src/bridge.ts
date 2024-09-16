@@ -7,7 +7,7 @@
 // https://github.com/hashicorp/terraform-cdk
 import * as fs from "fs-extra";
 import { join } from "path";
-import { gunzipSync } from 'zlib';
+import { gunzipSync } from "zlib";
 
 interface GoBridge {
   merge: (a: string, b: string) => Promise<string>;

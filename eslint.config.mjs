@@ -1,5 +1,5 @@
 export default [
   {
-    ignores: ["wasm/**/*"],
+    ignores: ["src/wasm/**/*"],
   },
 ];
