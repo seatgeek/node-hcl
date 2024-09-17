@@ -1,11 +1,11 @@
 {
   "name": "@seatgeek/node-hcl",
   "version": "0.0.0-semantically-released",
-  "packageManager": "yarn@4.1.1",
+  "packageManager": "yarn@1.22.22",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": "^20.8.1"
+    "node": "18 || 20"
   },
   "scripts": {
     "build:go": "scripts/go-build.sh",
@@ -36,7 +36,6 @@
     "typescript-eslint": "^8.5.0"
   },
   "dependencies": {
-    "crypto": "^1.0.1",
     "fs-extra": "^11.2.0"
   },
   "files": [
@@ -88,6 +87,7 @@
     ]
   },
   "volta": {
-    "node": "20.8.1"
+    "node": "20.9.0",
+    "yarn": "1.22.22"
   }
 }
