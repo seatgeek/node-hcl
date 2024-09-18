@@ -1,6 +1,6 @@
 # node-hcl
 
-This WebAssembly wrapper for https://github.com/hashicorp/hcl provides a convenient way to use the HCL (HashiCorp Configuration Language) library in your Node applications.
+This WebAssembly wrapper for https://github.com/hashicorp/hcl provides a convenient way to use the HCL (HashiCorp Configuration Language) library in Node.js.
 
 ## Usage
 
@@ -27,3 +27,5 @@ variable "b" {
 }`;
 const result = merge(a, b);
 ```
+
+Happy coding!
