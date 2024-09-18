@@ -8,6 +8,11 @@
   "engines": {
     "node": "20"
   },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts"
+  },
   "scripts": {
     "build:go": "scripts/go-build.sh",
     "build": "tsc && npm run build:go",
