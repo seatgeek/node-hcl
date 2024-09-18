@@ -18,22 +18,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
-      - run: yarn install
-      - run: yarn tsc
-      - run: yarn lint
+          cache: "npm"
+      - run: npm install
+      - run: npm run tsc
+      - run: npm run lint
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
     steps:
       - uses: actions/checkout@v3
       - name: Use Golang 1.23.1
@@ -46,15 +46,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
-      - run: yarn install
-      - run: yarn build:go
-      - run: yarn test
+          cache: "npm"
+      - run: npm install
+      - run: npm run build
+      - run: npm run test
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
     steps:
       - uses: actions/checkout@v3
       - name: Use Golang 1.23.1
@@ -67,9 +67,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
-      - run: yarn install
-      - run: yarn build
+          cache: "npm"
+      - run: npm install
+      - run: npm run build
         env:
           WASM_OUTPUT_DIR: dist/wasm
   release-dry-run:
@@ -86,17 +86,17 @@ jobs:
           go-version: 1.23.1
           cache-dependency-path: |
             ./go.sum
-      - name: Use Node.js 20.x
+      - name: Use Node.js 14.x
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
-          cache: "yarn"
-      - run: yarn install
-      - run: yarn build
+          node-version: 14.x
+          cache: "npm"
+      - run: npm install
+      - run: npm run build
         env:
           WASM_OUTPUT_DIR: dist/wasm
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn semantic-release --dry-run
+        run: npm run release -- --dry-run

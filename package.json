@@ -1,21 +1,22 @@
 {
   "name": "@seatgeek/node-hcl",
   "version": "0.0.0-semantically-released",
-  "packageManager": "yarn@4.1.1",
+  "packageManager": "npm@9.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": "^20.8.1"
+    "node": "20"
   },
   "scripts": {
     "build:go": "scripts/go-build.sh",
-    "build": "tsc && yarn build:go",
+    "build": "tsc && npm run build:go",
     "test:go": "scripts/go-test.sh",
-    "test": "jest && yarn test:go",
+    "test": "jest && npm run test:go",
     "tsc": "tsc",
     "tsc:full": "tsc --skipLibCheck false --incremental false",
     "format": "prettier -w . && eslint . --fix",
-    "lint": "prettier --check . && eslint ."
+    "lint": "prettier --check . && eslint .",
+    "release": "semantic-release"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
@@ -36,7 +37,6 @@
     "typescript-eslint": "^8.5.0"
   },
   "dependencies": {
-    "crypto": "^1.0.1",
     "fs-extra": "^11.2.0"
   },
   "files": [

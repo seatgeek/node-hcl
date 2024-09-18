@@ -25,13 +25,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20.x
-          cache: "yarn"
-      - run: yarn install
-      - run: yarn build
+          cache: "npm"
+      - run: npm install
+      - run: npm run build
         env:
           WASM_OUTPUT_DIR: dist/wasm
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn semantic-release
+        run: npm run release
