@@ -200,8 +200,18 @@ func convertMapToTokens(input map[string]interface{}) hclwrite.Tokens {
 		Bytes: []byte("\n"),
 	})
 
+	// sort keys for consistent ordering
+	keys := make([]string, 0, len(input))
+	for key := range input {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
 	// iterate through the map
-	for key, value := range input {
+	for _, key := range keys {
+		value := input[key]
+
 		// add the map key
 		tokens = append(tokens, &hclwrite.Token{
 			Type:  hclsyntax.TokenIdent,

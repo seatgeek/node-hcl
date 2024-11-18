@@ -137,11 +137,11 @@ variable "b" {
 			},
 			want: `module "b" {
   c = {
-    foo = {
-      value = 1
-    }
     bar = {
       value = 2
+    }
+    foo = {
+      value = 1
     }
   }
 }
