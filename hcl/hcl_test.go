@@ -66,7 +66,7 @@ variable "b" {
   type        = string
   description = "Variable A"
   override    = true
-	b           = "b"
+  b           = "b"
 }`,
 			},
 			want: `variable "a" {
@@ -85,7 +85,7 @@ variable "b" {
 			input: input{
 				a: `monitor "a" {
   description = "Monitor A"
-  
+
   threshold {
     critical = 90
     warning = 80
@@ -93,7 +93,7 @@ variable "b" {
 }`,
 				b: `monitor "a" {
   description = "Monitor A"
-  
+
   threshold {
     critical = 100
     recovery = 10
@@ -112,6 +112,41 @@ variable "b" {
 
 `,
 			wantErr: nil,
+		},
+		{
+			name: "merge nested duplicate",
+			input: input{
+				a: `module "b" {
+
+	c = {
+		"foo" = {
+			value = 1
+		}
+	}
+}
+			`,
+				b: `module "b" {
+
+	c = {
+		"bar" = {
+			value = 2
+		}
+	}
+}
+			`,
+			},
+			want: `module "b" {
+  c = {
+    foo = {
+      value = 1
+    }
+    bar = {
+      value = 2
+    }
+  }
+}
+
+`,
 		},
 	}
 
