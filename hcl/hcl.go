@@ -91,6 +91,7 @@ func mergeAttrs(aBlock *hclwrite.Block, bBlock *hclwrite.Block) {
 	}
 }
 
+// convertTokensToMap converts hclTokens to a map, but loses original spacing, comments, and ordering
 func convertTokensToMap(tokens hclwrite.Tokens) (map[string]interface{}, error) {
 	if tokens[0].Type != hclsyntax.TokenOBrace || tokens[len(tokens)-1].Type != hclsyntax.TokenCBrace {
 		return nil, fmt.Errorf("tokens are not a map")
@@ -185,6 +186,7 @@ func convertTokensToMap(tokens hclwrite.Tokens) (map[string]interface{}, error) 
 	return result, nil
 }
 
+// convertMapToTokens converts a map to hclTokens, but loses original spacing, comments, and ordering
 func convertMapToTokens(input map[string]interface{}) hclwrite.Tokens {
 	tokens := hclwrite.Tokens{}
 
@@ -209,7 +211,7 @@ func convertMapToTokens(input map[string]interface{}) hclwrite.Tokens {
 	sort.Strings(keys)
 
 	// iterate through the map
-	for _, key := range keys {
+	for i, key := range keys {
 		value := input[key]
 
 		// add the map key
@@ -239,8 +241,17 @@ func convertMapToTokens(input map[string]interface{}) hclwrite.Tokens {
 			})
 
 		case map[string]interface{}:
+			// recursively convert nested maps to tokens
 			nestedTokens := convertMapToTokens(v)
 			tokens = append(tokens, nestedTokens...)
+
+			// add newline after closing brace when not the last value
+			if i < len(keys)-1 {
+				tokens = append(tokens, &hclwrite.Token{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				})
+			}
 
 		default:
 			// ignore unsupported types

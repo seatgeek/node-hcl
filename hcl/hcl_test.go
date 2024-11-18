@@ -140,6 +140,7 @@ variable "b" {
     bar = {
       value = 2
     }
+
     foo = {
       value = 1
     }
