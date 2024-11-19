@@ -25,130 +25,129 @@ func TestMerge(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		// 		{
-		// 			name: "merge simple",
-		// 			input: input{
-		// 				a: `variable "a" {
-		//   type        = string
-		//   description = "Variable A"
-		//   default     = "a"
-		// }`,
-		// 				b: `variable "b" {
-		//   type        = string
-		//   description = "Variable B"
-		//   default     = "b"
-		// }`,
-		// 			},
-		// 			want: `variable "a" {
-		//   type        = string
-		//   description = "Variable A"
-		//   default     = "a"
-		// }
+		{
+			name: "merge simple",
+			input: input{
+				a: `variable "a" {
+  type        = string
+  description = "Variable A"
+  default     = "a"
+}`,
+				b: `variable "b" {
+  type        = string
+  description = "Variable B"
+  default     = "b"
+}`,
+			},
+			want: `variable "a" {
+  type        = string
+  description = "Variable A"
+  default     = "a"
+}
 
-		// variable "b" {
-		//   type        = string
-		//   description = "Variable B"
-		//   default     = "b"
-		// }
-		// `,
-		// 			wantErr: nil,
-		// 		},
-		// 		{
-		// 			name: "merge duplicate",
-		// 			input: input{
-		// 				a: `variable "a" {
-		//   type        = string
-		//   description = "Variable A"
-		//   override    = false
-		//   a					  = "a"
-		// }`,
-		// 				b: `variable "a" {
-		//   type        = string
-		//   description = "Variable A"
-		//   override    = true
-		//   b           = "b"
-		// }`,
-		// 			},
-		// 			want: `variable "a" {
-		//   a           = "a"
-		//   description = "Variable A"
-		//   override    = true
-		//   type        = string
-		//   b           = "b"
-		// }
+variable "b" {
+  type        = string
+  description = "Variable B"
+  default     = "b"
+}
+`,
+			wantErr: nil,
+		},
+		{
+			name: "merge duplicate",
+			input: input{
+				a: `variable "a" {
+  type        = string
+  description = "Variable A"
+  override    = false
+  a					  = "a"
+}`,
+				b: `variable "a" {
+  type        = string
+  description = "Variable A"
+  override    = true
+  b           = "b"
+}`,
+			},
+			want: `variable "a" {
+  a           = "a"
+  b           = "b"
+  description = "Variable A"
+  override    = true
+  type        = string
+}
 
-		// `,
-		// 			wantErr: nil,
-		// 		},
-		// 		{
-		// 			name: "merge nested",
-		// 			input: input{
-		// 				a: `monitor "a" {
-		//   description = "Monitor A"
+`,
+			wantErr: nil,
+		},
+		{
+			name: "merge nested",
+			input: input{
+				a: `monitor "a" {
+  description = "Monitor A"
 
-		//   threshold {
-		//     critical = 90
-		//     warning = 80
-		//   }
-		// }`,
-		// 				b: `monitor "a" {
-		//   description = "Monitor A"
+  threshold {
+    critical = 90
+    warning = 80
+  }
+}`,
+				b: `monitor "a" {
+  description = "Monitor A"
 
-		//   threshold {
-		//     critical = 100
-		//     recovery = 10
-		//   }
-		// }`,
-		// 			},
-		// 			want: `monitor "a" {
-		//   description = "Monitor A"
+  threshold {
+    critical = 100
+    recovery = 10
+  }
+}`,
+			},
+			want: `monitor "a" {
+  description = "Monitor A"
 
-		//   threshold {
-		//     critical = 100
-		//     warning  = 80
-		//     recovery = 10
-		//   }
-		// }
+  threshold {
+    critical = 100
+    recovery = 10
+    warning  = 80
+  }
+}
 
-		// `,
-		// 			wantErr: nil,
-		// 		},
-		// 		{
-		// 			name: "merge nested duplicate",
-		// 			input: input{
-		// 				a: `module "b" {
+`,
+			wantErr: nil,
+		},
+		{
+			name: "merge nested duplicate",
+			input: input{
+				a: `module "b" {
 
-		// 	c = {
-		// 		"foo" = {
-		// 			value = 1
-		// 		}
-		// 	}
-		// }
-		// 			`,
-		// 				b: `module "b" {
+			c = {
+				"foo" = {
+					value = 1
+				}
+			}
+		}
+					`,
+				b: `module "b" {
 
-		// 	c = {
-		// 		"bar" = {
-		// 			value = 2
-		// 		}
-		// 	}
-		// }
-		// 			`,
-		// 			},
-		// 			want: `module "b" {
-		//   c = {
-		//     bar = {
-		//       value = 2
-		//     }
+			c = {
+				"bar" = {
+					value = 2
+				}
+			}
+		}
+					`,
+			},
+			want: `module "b" {
+  c = {
+    "bar" = {
+      value = 2
+    }
+    "foo" = {
+      value = 1
+    }
+  }
+}
 
-		//     foo = {
-		//       value = 1
-		//     }
-		//   }
-		// }
-
-		// `,
-		// 		},
+`,
+		},
 		{
 			name: "merge complicated nested duplicate",
 			input: input{
@@ -195,7 +194,35 @@ func TestMerge(t *testing.T) {
 	}
 }`,
 			},
-			want: `
+			want: `module "b" {
+  test_map = {
+    bool_key      = true
+    empty_map_key = {}
+    float_key     = 3.14
+    "int_key"     = 42
+    int_key_2     = 43
+    list_key      = ["item1", "item2", 3, true, "new"]
+    mixed_key = {
+      inner_string = "inner_value"
+      inner_list   = [1, 2, 3]
+      inner_map    = { key = "value" }
+    }
+    nested_key = {
+      nested_string = "nested_value"
+      nested_int    = 100
+      deep_nested = {
+        deep_key = "deep_value"
+        new      = "new"
+      }
+    }
+    null_key     = null
+    "quoted.key" = "quoted_value"
+    string_key   = "string_value"
+    string_key_2 = "string_value"
+    var_key      = var.value
+  }
+}
+
 `,
 		},
 	}

@@ -32,19 +32,19 @@ func blockToMap(blocks []*hclwrite.Block) map[string]*hclwrite.Block {
 // only merges the top level keys of the map, if it exists the value is overridden
 func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tokens, error) {
 	if aTokens[0].Type != hclsyntax.TokenOBrace || aTokens[len(aTokens)-1].Type != hclsyntax.TokenCBrace {
-		return aTokens, nil
+		return bTokens, nil
 	}
 
 	if bTokens[0].Type != hclsyntax.TokenOBrace || bTokens[len(bTokens)-1].Type != hclsyntax.TokenCBrace {
-		return aTokens, nil
+		return bTokens, nil
 	}
 
-	aMap, err := convertTokensToMap(aTokens)
+	aMap, err := objectForTokensMap(aTokens)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize tokens: %w", err)
 	}
 
-	bMap, err := convertTokensToMap(bTokens)
+	bMap, err := objectForTokensMap(bTokens)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize tokens: %w", err)
 	}
@@ -75,40 +75,46 @@ func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tok
 // and are identified by their key, e.g.
 // key = value
 // or key = { ... }
-func mergeAttrs(aBlock *hclwrite.Block, bBlock *hclwrite.Block) {
-	attributes := aBlock.Body().Attributes()
+func mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite.Attribute) map[string]hclwrite.Tokens {
+	outAttr := make(map[string]hclwrite.Tokens)
 
-	// sort the attributes to ensure consistent ordering
-	keys := make([]string, 0, len(attributes))
-	for key := range attributes {
-		keys = append(keys, key)
+	for key, aValue := range aAttr {
+		bValue, found := bAttr[key]
+
+		aAttrTokens := aValue.Expr().BuildTokens(nil)
+
+		if found {
+			bAttrTokens := bValue.Expr().BuildTokens(nil)
+			// merge the value, which are a list of attributes broken up into hclTokens
+			mergedTokens, err := mergeTokens(aAttrTokens, bAttrTokens)
+			if err != nil {
+				// if there was an error merging the tokens, default to the bAttrTokens
+				outAttr[key] = bAttrTokens
+				continue
+			}
+
+			outAttr[key] = mergedTokens
+		} else {
+			outAttr[key] = aAttrTokens
+		}
 	}
 
-	sort.Strings(keys)
+	// add any attributes that are in bAttr but not in aAttr
+	for key, bValue := range bAttr {
+		_, found := aAttr[key]
 
-	for _, key := range keys {
-		aAttrTokens := attributes[key].Expr().BuildTokens(nil)
-		bAttr := bBlock.Body().GetAttribute(key)
-
-		if bAttr == nil {
-			bBlock.Body().SetAttributeRaw(key, aAttrTokens)
-			continue
+		if !found {
+			bAttrTokens := bValue.Expr().BuildTokens(nil)
+			outAttr[key] = bAttrTokens
 		}
-
-		// merge the value, which are a list of attributes broken up into hclTokens
-		// TODO: gate merging tokens behind an option flag
-		mergedTokens, err := mergeTokens(aAttrTokens, bAttr.Expr().BuildTokens(nil))
-		if err != nil {
-			// if there was an error merging the tokens, default to the aAttr
-			bBlock.Body().SetAttributeRaw(key, aAttrTokens)
-			continue
-		}
-
-		bBlock.Body().SetAttributeRaw(key, mergedTokens)
 	}
+
+	return outAttr
 }
 
-func convertTokensToMap(tokens hclwrite.Tokens) (map[string]hclwrite.ObjectAttrTokens, error) {
+// objectForTokensMap is the inverse of hclwrite.TokensForObject, only merges the top level keys, but not the values of the keys.
+// if a value exists, it is overridden
+func objectForTokensMap(tokens hclwrite.Tokens) (map[string]hclwrite.ObjectAttrTokens, error) {
 	if len(tokens) < 2 || tokens[0].Type != hclsyntax.TokenOBrace || tokens[len(tokens)-1].Type != hclsyntax.TokenCBrace {
 		return nil, fmt.Errorf("tokens are not a valid object")
 	}
@@ -244,9 +250,19 @@ func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwri
 			// override outBlock with the new block to merge the two blocks into
 			outBlock = hclwrite.NewBlock(aBlock.Type(), aBlock.Labels())
 
-			// set block attributes of the new block
-			mergeAttrs(aBlock, outBlock)
-			mergeAttrs(bBlock, outBlock)
+			// merge block attributes
+			outAttributes := mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes())
+			// sort the keys to ensure consistent ordering
+			keys := make([]string, 0, len(outAttributes))
+			for key := range outAttributes {
+				keys = append(keys, key)
+			}
+
+			sort.Strings(keys)
+
+			for _, key := range keys {
+				outBlock.Body().SetAttributeRaw(key, outAttributes[key])
+			}
 
 			// recursively merge nested blocks
 			aNestedBlocks := aBlock.Body().Blocks()
