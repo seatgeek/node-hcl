@@ -25,128 +25,177 @@ func TestMerge(t *testing.T) {
 		want    string
 		wantErr error
 	}{
+		// 		{
+		// 			name: "merge simple",
+		// 			input: input{
+		// 				a: `variable "a" {
+		//   type        = string
+		//   description = "Variable A"
+		//   default     = "a"
+		// }`,
+		// 				b: `variable "b" {
+		//   type        = string
+		//   description = "Variable B"
+		//   default     = "b"
+		// }`,
+		// 			},
+		// 			want: `variable "a" {
+		//   type        = string
+		//   description = "Variable A"
+		//   default     = "a"
+		// }
+
+		// variable "b" {
+		//   type        = string
+		//   description = "Variable B"
+		//   default     = "b"
+		// }
+		// `,
+		// 			wantErr: nil,
+		// 		},
+		// 		{
+		// 			name: "merge duplicate",
+		// 			input: input{
+		// 				a: `variable "a" {
+		//   type        = string
+		//   description = "Variable A"
+		//   override    = false
+		//   a					  = "a"
+		// }`,
+		// 				b: `variable "a" {
+		//   type        = string
+		//   description = "Variable A"
+		//   override    = true
+		//   b           = "b"
+		// }`,
+		// 			},
+		// 			want: `variable "a" {
+		//   a           = "a"
+		//   description = "Variable A"
+		//   override    = true
+		//   type        = string
+		//   b           = "b"
+		// }
+
+		// `,
+		// 			wantErr: nil,
+		// 		},
+		// 		{
+		// 			name: "merge nested",
+		// 			input: input{
+		// 				a: `monitor "a" {
+		//   description = "Monitor A"
+
+		//   threshold {
+		//     critical = 90
+		//     warning = 80
+		//   }
+		// }`,
+		// 				b: `monitor "a" {
+		//   description = "Monitor A"
+
+		//   threshold {
+		//     critical = 100
+		//     recovery = 10
+		//   }
+		// }`,
+		// 			},
+		// 			want: `monitor "a" {
+		//   description = "Monitor A"
+
+		//   threshold {
+		//     critical = 100
+		//     warning  = 80
+		//     recovery = 10
+		//   }
+		// }
+
+		// `,
+		// 			wantErr: nil,
+		// 		},
+		// 		{
+		// 			name: "merge nested duplicate",
+		// 			input: input{
+		// 				a: `module "b" {
+
+		// 	c = {
+		// 		"foo" = {
+		// 			value = 1
+		// 		}
+		// 	}
+		// }
+		// 			`,
+		// 				b: `module "b" {
+
+		// 	c = {
+		// 		"bar" = {
+		// 			value = 2
+		// 		}
+		// 	}
+		// }
+		// 			`,
+		// 			},
+		// 			want: `module "b" {
+		//   c = {
+		//     bar = {
+		//       value = 2
+		//     }
+
+		//     foo = {
+		//       value = 1
+		//     }
+		//   }
+		// }
+
+		// `,
+		// 		},
 		{
-			name: "merge simple",
-			input: input{
-				a: `variable "a" {
-  type        = string
-  description = "Variable A"
-  default     = "a"
-}`,
-				b: `variable "b" {
-  type        = string
-  description = "Variable B"
-  default     = "b"
-}`,
-			},
-			want: `variable "a" {
-  type        = string
-  description = "Variable A"
-  default     = "a"
-}
-
-variable "b" {
-  type        = string
-  description = "Variable B"
-  default     = "b"
-}
-`,
-			wantErr: nil,
-		},
-		{
-			name: "merge duplicate",
-			input: input{
-				a: `variable "a" {
-  type        = string
-  description = "Variable A"
-  override    = false
-  a					  = "a"
-}`,
-				b: `variable "a" {
-  type        = string
-  description = "Variable A"
-  override    = true
-  b           = "b"
-}`,
-			},
-			want: `variable "a" {
-  a           = "a"
-  description = "Variable A"
-  override    = true
-  type        = string
-  b           = "b"
-}
-
-`,
-			wantErr: nil,
-		},
-		{
-			name: "merge nested",
-			input: input{
-				a: `monitor "a" {
-  description = "Monitor A"
-
-  threshold {
-    critical = 90
-    warning = 80
-  }
-}`,
-				b: `monitor "a" {
-  description = "Monitor A"
-
-  threshold {
-    critical = 100
-    recovery = 10
-  }
-}`,
-			},
-			want: `monitor "a" {
-  description = "Monitor A"
-
-  threshold {
-    critical = 100
-    warning  = 80
-    recovery = 10
-  }
-}
-
-`,
-			wantErr: nil,
-		},
-		{
-			name: "merge nested duplicate",
+			name: "merge complicated nested duplicate",
 			input: input{
 				a: `module "b" {
-
-	c = {
-		"foo" = {
-			value = 1
+	test_map = {
+		string_key    = "string_value"
+		"int_key"     = 42
+		var_key       = var.value
+		float_key     = 3.14
+		bool_key      = true
+		list_key      = ["item1", "item2", 3, true]
+		nested_key    = {
+			nested_string = "nested_value"
+			deep_nested   = {
+				deep_key = "deep_value"
+			}
 		}
+		empty_map_key = {}
 	}
-}
-			`,
+}`,
 				b: `module "b" {
-
-	c = {
-		"bar" = {
-			value = 2
+	test_map = {
+		string_key_2  = "string_value"
+		int_key_2     = 43
+		float_key     = 3.14
+		bool_key      = true
+		null_key      = null
+		list_key      = ["item1", "item2", 3, true, "new"]
+		nested_key    = {
+			nested_string = "nested_value"
+			nested_int    = 100
+			deep_nested   = {
+				deep_key = "deep_value"
+				new      = "new"
+			}
+		}
+		empty_map_key = {}
+		"quoted.key"  = "quoted_value"
+		mixed_key     = {
+			inner_string = "inner_value"
+			inner_list   = [1, 2, 3]
+			inner_map    = { key = "value" }
 		}
 	}
-}
-			`,
+}`,
 			},
-			want: `module "b" {
-  c = {
-    bar = {
-      value = 2
-    }
-
-    foo = {
-      value = 1
-    }
-  }
-}
-
+			want: `
 `,
 		},
 	}

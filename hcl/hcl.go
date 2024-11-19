@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"maps"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -29,7 +28,8 @@ func blockToMap(blocks []*hclwrite.Block) map[string]*hclwrite.Block {
 	return blockMap
 }
 
-// mergeTokens only merges tokens if they are a map or slice, otherwise defaults to the aTokens
+// mergeTokens only merges tokens if they are a map, otherwise defaults to the aTokens
+// only merges the top level keys of the map, if it exists the value is overridden
 func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tokens, error) {
 	if aTokens[0].Type != hclsyntax.TokenOBrace || aTokens[len(aTokens)-1].Type != hclsyntax.TokenCBrace {
 		return aTokens, nil
@@ -49,15 +49,32 @@ func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tok
 		return nil, fmt.Errorf("failed to deserialize tokens: %w", err)
 	}
 
-	outMap := make(map[string]interface{})
-	// TODO: support merging nested maps
+	outMap := make(map[string]hclwrite.ObjectAttrTokens)
 	// this merges the top layer of the map, where nested maps are overwritten
 	maps.Copy(outMap, aMap)
 	maps.Copy(outMap, bMap)
 
-	return convertMapToTokens(outMap), nil
+	var values []hclwrite.ObjectAttrTokens
+
+	// sort the keys to ensure consistent ordering
+	keys := make([]string, 0, len(outMap))
+	for key := range outMap {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		values = append(values, outMap[key])
+	}
+
+	return hclwrite.TokensForObject(values), nil
 }
 
+// mergeAttrs merges two blocks' attributes together. Attributes are composed of hclTokens
+// and are identified by their key, e.g.
+// key = value
+// or key = { ... }
 func mergeAttrs(aBlock *hclwrite.Block, bBlock *hclwrite.Block) {
 	attributes := aBlock.Body().Attributes()
 
@@ -78,7 +95,7 @@ func mergeAttrs(aBlock *hclwrite.Block, bBlock *hclwrite.Block) {
 			continue
 		}
 
-		// merge tokens
+		// merge the value, which are a list of attributes broken up into hclTokens
 		// TODO: gate merging tokens behind an option flag
 		mergedTokens, err := mergeTokens(aAttrTokens, bAttr.Expr().BuildTokens(nil))
 		if err != nil {
@@ -91,189 +108,107 @@ func mergeAttrs(aBlock *hclwrite.Block, bBlock *hclwrite.Block) {
 	}
 }
 
-// convertTokensToMap converts hclTokens to a map, but loses original spacing, comments, and ordering
-func convertTokensToMap(tokens hclwrite.Tokens) (map[string]interface{}, error) {
-	if tokens[0].Type != hclsyntax.TokenOBrace || tokens[len(tokens)-1].Type != hclsyntax.TokenCBrace {
-		return nil, fmt.Errorf("tokens are not a map")
+func convertTokensToMap(tokens hclwrite.Tokens) (map[string]hclwrite.ObjectAttrTokens, error) {
+	if len(tokens) < 2 || tokens[0].Type != hclsyntax.TokenOBrace || tokens[len(tokens)-1].Type != hclsyntax.TokenCBrace {
+		return nil, fmt.Errorf("tokens are not a valid object")
 	}
 
-	result := make(map[string]interface{})
-	var currentKey string
+	result := make(map[string]hclwrite.ObjectAttrTokens)
+	var currentKey string                  // used for the result map
+	var currentKeyTokens hclwrite.Tokens   // used for the ObjectAttrTokens key
+	var currentValueTokens hclwrite.Tokens // used for the ObjectAttrTokens value
+	var inValue bool                       // flag to determine if we are in the value part of the tokens when parsing
 
-	// offset to skip the opening and closing braces
-	for i := 1; i < len(tokens)-1; i++ {
+	i := 1                  // start after the opening brace
+	for i < len(tokens)-1 { // skip the closing brace
 		token := tokens[i]
 
 		switch token.Type {
-		case hclsyntax.TokenIdent:
-			currentKey = string(token.Bytes)
+		case hclsyntax.TokenIdent, hclsyntax.TokenQuotedLit:
+			if inValue {
+				// set the value if in the value
+				currentValueTokens = append(currentValueTokens, token)
+			} else {
+				// set the key
+				currentKey = string(token.Bytes)
+				currentKeyTokens = append(currentKeyTokens, token)
+			}
 
-		case hclsyntax.TokenOBrace:
-			unclosedBraces := 1
+		case hclsyntax.TokenEqual:
+			// flag that we are in the value part of the tokens
+			inValue = true
+
+		case hclsyntax.TokenOBrace, hclsyntax.TokenOBrack:
+			// find the closing token for the look ahead
+			cToken := hclsyntax.TokenCBrace
+			if token.Type == hclsyntax.TokenOBrack {
+				cToken = hclsyntax.TokenCBrack
+			}
+
+			// look ahead to find the end index of map/array
+			unclosedTokens := 1
 			endIndex := -1
-
-			// find the closing brace
 			for j := i + 1; j < len(tokens); j++ {
-				if tokens[j].Type == hclsyntax.TokenOBrace {
-					unclosedBraces++
-				} else if tokens[j].Type == hclsyntax.TokenCBrace {
-					unclosedBraces--
+				if tokens[j].Type == token.Type {
+					unclosedTokens++
+				} else if tokens[j].Type == cToken {
+					unclosedTokens--
 				}
-
-				if unclosedBraces == 0 {
+				if unclosedTokens == 0 {
 					endIndex = j
 					break
 				}
 			}
 
 			if endIndex == -1 {
-				return nil, fmt.Errorf("failed to find closing brace")
+				return nil, fmt.Errorf("failed to find closing token")
 			}
 
-			// get the index of the OBrace and CBrace and call recursively
-			subTokens := tokens[i : endIndex+1]
-			subMap, err := convertTokensToMap(subTokens)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse map: %w", err)
-			}
-
-			result[currentKey] = subMap
-			currentKey = ""
+			// include the tokens for the map/array in the current value
+			currentValueTokens = append(currentValueTokens, tokens[i:endIndex+1]...)
 			i = endIndex
 
-		// parse quoted string values
-		case hclsyntax.TokenQuotedLit:
-			value := string(token.Bytes)
-			if len(currentKey) == 0 {
-				currentKey = value
-				break
+		case hclsyntax.TokenNewline, hclsyntax.TokenComma:
+			// if at the end of the value, add the key and value to the result map
+			if inValue {
+				result[currentKey] = hclwrite.ObjectAttrTokens{
+					Name:  currentKeyTokens,
+					Value: currentValueTokens,
+				}
+
+				// reset the current key and value tokens to parse the next attribute
+				currentKey = ""
+				currentKeyTokens = hclwrite.Tokens{}
+				currentValueTokens = hclwrite.Tokens{}
+				inValue = false
 			}
 
-			result[currentKey] = value
-			currentKey = ""
-
-		// parse string values
-		case hclsyntax.TokenStringLit:
-			value := string(token.Bytes)
-			if len(currentKey) == 0 {
-				currentKey = value
-				break
-			}
-
-			result[currentKey] = value
-			currentKey = ""
-
-		// parse int values
-		case hclsyntax.TokenNumberLit:
-			value, err := strconv.Atoi(string(token.Bytes))
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse int: %w", err)
-			}
-
-			result[currentKey] = value
-			currentKey = ""
-
-		// ignore remaining tokens
 		default:
-
+			if inValue {
+				// add tokens to the value until we hit the end of the value (comma or newline)
+				currentValueTokens = append(currentValueTokens, token)
+			} else {
+				// add tokens to the key until we hit the end of the key (equal sign)
+				currentKeyTokens = append(currentKeyTokens, token)
+			}
 		}
+
+		i++
 	}
 
-	if currentKey != "" {
-		return nil, fmt.Errorf("incomplete key-value pair, key: %s", currentKey)
+	// add the last attribute found to the result map
+	if len(currentKeyTokens) > 0 && len(currentValueTokens) > 0 {
+		result[currentKey] = hclwrite.ObjectAttrTokens{
+			Name:  currentKeyTokens,
+			Value: currentValueTokens,
+		}
 	}
 
 	return result, nil
 }
 
-// convertMapToTokens converts a map to hclTokens, but loses original spacing, comments, and ordering
-func convertMapToTokens(input map[string]interface{}) hclwrite.Tokens {
-	tokens := hclwrite.Tokens{}
-
-	// add opening brace for the map
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenOBrace,
-		Bytes: []byte("{"),
-	})
-
-	// add newline
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenNewline,
-		Bytes: []byte("\n"),
-	})
-
-	// sort keys for consistent ordering
-	keys := make([]string, 0, len(input))
-	for key := range input {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-
-	// iterate through the map
-	for i, key := range keys {
-		value := input[key]
-
-		// add the map key
-		tokens = append(tokens, &hclwrite.Token{
-			Type:  hclsyntax.TokenIdent,
-			Bytes: []byte(key),
-		})
-
-		// add the equal sign
-		tokens = append(tokens, &hclwrite.Token{
-			Type:  hclsyntax.TokenEqual,
-			Bytes: []byte("="),
-		})
-
-		// convert type to the proper token type
-		switch v := value.(type) {
-		case string:
-			tokens = append(tokens, &hclwrite.Token{
-				Type:  hclsyntax.TokenQuotedLit,
-				Bytes: []byte(fmt.Sprintf("%q", v)), // Wrap in quotes
-			})
-
-		case int:
-			tokens = append(tokens, &hclwrite.Token{
-				Type:  hclsyntax.TokenNumberLit,
-				Bytes: []byte(fmt.Sprintf("%d", v)),
-			})
-
-		case map[string]interface{}:
-			// recursively convert nested maps to tokens
-			nestedTokens := convertMapToTokens(v)
-			tokens = append(tokens, nestedTokens...)
-
-			// add newline after closing brace when not the last value
-			if i < len(keys)-1 {
-				tokens = append(tokens, &hclwrite.Token{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
-				})
-			}
-
-		default:
-			// ignore unsupported types
-		}
-
-		// add newline
-		tokens = append(tokens, &hclwrite.Token{
-			Type:  hclsyntax.TokenNewline,
-			Bytes: []byte("\n"),
-		})
-	}
-
-	// add closing brace for the map
-	tokens = append(tokens, &hclwrite.Token{
-		Type:  hclsyntax.TokenCBrace,
-		Bytes: []byte("}"),
-	})
-
-	return tokens
-}
-
-func merge(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
+// mergeFiles merges two HCL files together
+func mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
 	out := hclwrite.NewFile()
 	outBlocks := mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks())
 
@@ -292,6 +227,9 @@ func merge(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
 	return out
 }
 
+// mergeBlocks merges two blocks together, a block is identified by its type and labels, e.g.
+// type "label" { ... }
+// or type { ... }
 func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwrite.Block {
 	outBlocks := make([]*hclwrite.Block, 0)
 	aBlockMap := blockToMap(aBlocks)
@@ -346,6 +284,7 @@ func parseBytes(bytes []byte) (*hclwrite.File, error) {
 	return sourceHclFile, nil
 }
 
+// Merge merges two HCL strings together
 func Merge(a string, b string) (string, error) {
 	aBytes := []byte(a)
 	bBytes := []byte(b)
@@ -361,8 +300,8 @@ func Merge(a string, b string) (string, error) {
 		return "", err
 	}
 
-	// merge the blocks from the HCL files
-	outFile := merge(aFile, bFile)
+	// merge the blocks and attributes from the HCL files
+	outFile := mergeFiles(aFile, bFile)
 	outFileFormatted := hclwrite.Format(outFile.Bytes())
 
 	return string(outFileFormatted), nil
