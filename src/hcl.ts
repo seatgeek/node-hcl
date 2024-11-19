@@ -4,6 +4,18 @@
  */
 import { wasm } from "./bridge";
 
-export async function merge(a: string, b: string): Promise<string> {
-  return await wasm.merge(a, b);
+// MergeOptions is the options for the merge function
+export class MergeOptions {
+  // mergeMapKeys merges map keys for hcl block attributes that are a map.
+  // note: this will not merge the values of the keys.
+  public mergeMapKeys: boolean = false;
+}
+
+// merge merges two HCL strings
+export async function merge(
+  a: string,
+  b: string,
+  options?: MergeOptions,
+): Promise<string> {
+  return await wasm.merge(a, b, options);
 }

@@ -2,7 +2,7 @@
  * Copyright SeatGeek
  * Licensed under the terms of the Apache-2.0 license. See LICENSE file in project root for terms.
  */
-package hcl
+package hclmerge
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ func blockToMap(blocks []*hclwrite.Block) map[string]*hclwrite.Block {
 
 // mergeTokens only merges tokens if they are a map, otherwise defaults to the aTokens
 // only merges the top level keys of the map, if it exists the value is overridden
-func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tokens, error) {
+func (m *Merger) mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tokens, error) {
 	if aTokens[0].Type != hclsyntax.TokenOBrace || aTokens[len(aTokens)-1].Type != hclsyntax.TokenCBrace {
 		return bTokens, nil
 	}
@@ -75,7 +75,7 @@ func mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (hclwrite.Tok
 // and are identified by their key, e.g.
 // key = value
 // or key = { ... }
-func mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite.Attribute) map[string]hclwrite.Tokens {
+func (m *Merger) mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite.Attribute) map[string]hclwrite.Tokens {
 	outAttr := make(map[string]hclwrite.Tokens)
 
 	for key, aValue := range aAttr {
@@ -83,10 +83,10 @@ func mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite
 
 		aAttrTokens := aValue.Expr().BuildTokens(nil)
 
-		if found {
+		if found && m.options.MergeMapKeys {
 			bAttrTokens := bValue.Expr().BuildTokens(nil)
-			// merge the value, which are a list of attributes broken up into hclTokens
-			mergedTokens, err := mergeTokens(aAttrTokens, bAttrTokens)
+			// attempt to merge the value, which are a list of attributes broken up into hclTokens
+			mergedTokens, err := m.mergeTokens(aAttrTokens, bAttrTokens)
 			if err != nil {
 				// if there was an error merging the tokens, default to the bAttrTokens
 				outAttr[key] = bAttrTokens
@@ -94,6 +94,10 @@ func mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite
 			}
 
 			outAttr[key] = mergedTokens
+		} else if found {
+			// if the key is found in both attributes, default to the bAttrTokens
+			bAttrTokens := bValue.Expr().BuildTokens(nil)
+			outAttr[key] = bAttrTokens
 		} else {
 			outAttr[key] = aAttrTokens
 		}
@@ -214,9 +218,9 @@ func objectForTokensMap(tokens hclwrite.Tokens) (map[string]hclwrite.ObjectAttrT
 }
 
 // mergeFiles merges two HCL files together
-func mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
+func (m *Merger) mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
 	out := hclwrite.NewFile()
-	outBlocks := mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks())
+	outBlocks := m.mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks())
 
 	lastIndex := len(outBlocks) - 1
 
@@ -236,7 +240,7 @@ func mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
 // mergeBlocks merges two blocks together, a block is identified by its type and labels, e.g.
 // type "label" { ... }
 // or type { ... }
-func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwrite.Block {
+func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwrite.Block {
 	outBlocks := make([]*hclwrite.Block, 0)
 	aBlockMap := blockToMap(aBlocks)
 	bBlockMap := blockToMap(bBlocks)
@@ -251,7 +255,7 @@ func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwri
 			outBlock = hclwrite.NewBlock(aBlock.Type(), aBlock.Labels())
 
 			// merge block attributes
-			outAttributes := mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes())
+			outAttributes := m.mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes())
 			// sort the keys to ensure consistent ordering
 			keys := make([]string, 0, len(outAttributes))
 			for key := range outAttributes {
@@ -267,7 +271,7 @@ func mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwri
 			// recursively merge nested blocks
 			aNestedBlocks := aBlock.Body().Blocks()
 			bNestedBlocks := bBlock.Body().Blocks()
-			outNestedBlocks := mergeBlocks(aNestedBlocks, bNestedBlocks)
+			outNestedBlocks := m.mergeBlocks(aNestedBlocks, bNestedBlocks)
 
 			for _, nestedBlock := range outNestedBlocks {
 				outBlock.Body().AppendNewline()
@@ -300,8 +304,37 @@ func parseBytes(bytes []byte) (*hclwrite.File, error) {
 	return sourceHclFile, nil
 }
 
+// MergeOptions are the options for merging two HCL strings
+type MergeOptions struct {
+	// MergeMapKeys merges the keys of maps together, note this does not merge the values of the keys. If
+	// unset, the keys of the second map will override the keys of the first map.
+	MergeMapKeys bool
+}
+
+type merger interface {
+	Merge(a string, b string) (string, error)
+}
+
+var _ merger = &Merger{}
+
+// NewMerger creates a new Merger with the provided options
+func NewMerger(options *MergeOptions) *Merger {
+	if options == nil {
+		options = &MergeOptions{}
+	}
+
+	return &Merger{
+		options: options,
+	}
+}
+
+// Merger is the struct that merges two HCL strings together
+type Merger struct {
+	options *MergeOptions
+}
+
 // Merge merges two HCL strings together
-func Merge(a string, b string) (string, error) {
+func (m *Merger) Merge(a string, b string) (string, error) {
 	aBytes := []byte(a)
 	bBytes := []byte(b)
 
@@ -317,7 +350,7 @@ func Merge(a string, b string) (string, error) {
 	}
 
 	// merge the blocks and attributes from the HCL files
-	outFile := mergeFiles(aFile, bFile)
+	outFile := m.mergeFiles(aFile, bFile)
 	outFileFormatted := hclwrite.Format(outFile.Bytes())
 
 	return string(outFileFormatted), nil
