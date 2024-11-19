@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"syscall/js"
 
-	"github.com/seatgeek/node-hcl/packages/hclmerge"
+	"github.com/seatgeek/node-hcl/hcl"
 )
 
 var jsGlobal js.Value
@@ -58,7 +58,7 @@ func main() {
 			return nil, fmt.Errorf("Invalid second argument type, expected string")
 		}
 
-		options := &hclmerge.MergeOptions{}
+		options := &hcl.MergeOptions{}
 
 		if argCount == 3 {
 			arg2Type := args[2].Type()
@@ -74,7 +74,7 @@ func main() {
 		aHclString := args[0].String()
 		bHclString := args[1].String()
 
-		hclmerger := hclmerge.NewMerger(options)
+		hclmerger := hcl.NewMerger(options)
 		return hclmerger.Merge(aHclString, bHclString)
 	})
 

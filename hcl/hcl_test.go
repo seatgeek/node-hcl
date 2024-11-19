@@ -2,12 +2,12 @@
  * Copyright SeatGeek
  * Licensed under the terms of the Apache-2.0 license. See LICENSE file in project root for terms.
  */
-package hclmerge_test
+package hcl_test
 
 import (
 	"testing"
 
-	"github.com/seatgeek/node-hcl/packages/hclmerge"
+	"github.com/seatgeek/node-hcl/hcl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ func TestMerge(t *testing.T) {
 	type input struct {
 		a       string
 		b       string
-		options *hclmerge.MergeOptions
+		options *hcl.MergeOptions
 	}
 
 	tests := []struct {
@@ -135,7 +135,7 @@ variable "b" {
 			}
 		}
 					`,
-				options: &hclmerge.MergeOptions{
+				options: &hcl.MergeOptions{
 					MergeMapKeys: true,
 				},
 			},
@@ -197,7 +197,7 @@ variable "b" {
 		}
 	}
 }`,
-				options: &hclmerge.MergeOptions{
+				options: &hcl.MergeOptions{
 					MergeMapKeys: true,
 				},
 			},
@@ -238,7 +238,7 @@ variable "b" {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			merger := hclmerge.NewMerger(tc.input.options)
+			merger := hcl.NewMerger(tc.input.options)
 			got, err := merger.Merge(tc.input.a, tc.input.b)
 			assert.Equal(t, tc.want, got)
 
