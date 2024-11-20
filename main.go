@@ -45,13 +45,37 @@ func main() {
 	c := make(chan struct{}, 0)
 
 	registerFn("merge", func(this js.Value, args []js.Value) (interface{}, error) {
-		if len(args) < 2 {
-			return nil, fmt.Errorf("Not enough arguments, expected (2)")
+		argCount := len(args)
+		if argCount < 2 || argCount > 3 {
+			return nil, fmt.Errorf("Invalid number of arguments, expected (2 - 3)")
+		}
+
+		if args[0].Type() != js.TypeString {
+			return nil, fmt.Errorf("Invalid first argument type, expected string")
+		}
+
+		if args[1].Type() != js.TypeString {
+			return nil, fmt.Errorf("Invalid second argument type, expected string")
+		}
+
+		options := &hcl.MergeOptions{}
+
+		if argCount == 3 {
+			arg2Type := args[2].Type()
+			if arg2Type != js.TypeObject && arg2Type != js.TypeUndefined {
+				return nil, fmt.Errorf("Invalid third argument type, expected optional object")
+			}
+
+			if arg2Type == js.TypeObject {
+				options.MergeMapKeys = args[2].Get("mergeMapKeys").Bool()
+			}
 		}
 
 		aHclString := args[0].String()
 		bHclString := args[1].String()
-		return hcl.Merge(aHclString, bHclString)
+
+		hclmerger := hcl.NewMerger(options)
+		return hclmerger.Merge(aHclString, bHclString)
 	})
 
 	<-c

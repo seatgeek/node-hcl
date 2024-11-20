@@ -10,7 +10,7 @@ import { join } from "path";
 import { gunzipSync } from "zlib";
 
 interface GoBridge {
-  merge: (a: string, b: string) => Promise<string>;
+  merge: (a: string, b: string, options?: object) => Promise<string>;
 }
 
 declare const WebAssembly: any;

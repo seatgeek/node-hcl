@@ -52,4 +52,74 @@ variable "b" {
     const actual = await merge(a, b);
     expect(actual).toBe(expected);
   });
+
+  it("should merge nested map keys", async () => {
+    const a = `variable "a" {
+  foo = "bar"
+  map1 = {
+    "key1" = {
+      numval           = 1
+      numval2          = 3
+      varval           = local.myvar
+      nested_map = {
+        "nested_num"    = 100
+        "nested_string" = "baz"
+      }
+    },
+  }
+  map2 = {
+    "key2" = {
+      foo = "bar"
+    },
+  }
+}
+`;
+    const b = `variable "a" {
+  bar = "baz"
+  map1 = {
+    "key1" = {
+      numval = 9
+    }
+  }
+  map3 = {
+    "key3" = {
+      numval = 9
+      nested_map = {
+        "nested_num"    = 100
+        "nested_string" = "baz"
+      }
+    },
+  }
+}
+`;
+
+    const expected = `variable "a" {
+  bar = "baz"
+  foo = "bar"
+  map1 = {
+    "key1" = {
+      numval = 9
+    }
+  }
+  map2 = {
+    "key2" = {
+      foo = "bar"
+    },
+  }
+  map3 = {
+    "key3" = {
+      numval = 9
+      nested_map = {
+        "nested_num"    = 100
+        "nested_string" = "baz"
+      }
+    },
+  }
+}
+
+`;
+    const options = { mergeMapKeys: true };
+    const actual = await merge(a, b, options);
+    expect(actual).toBe(expected);
+  });
 });
