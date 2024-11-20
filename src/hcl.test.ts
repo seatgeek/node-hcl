@@ -64,7 +64,10 @@ variable "b" {
       nested_map = {
         "nested_num"    = 100
         "nested_string" = "baz"
-      }
+      },
+    },
+    "key2" = {
+      numval = 2
     },
   }
   map2 = {
@@ -99,6 +102,9 @@ variable "b" {
   map1 = {
     "key1" = {
       numval = 9
+    }
+    "key2" = {
+      numval = 2
     }
   }
   map2 = {
