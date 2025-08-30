@@ -112,7 +112,6 @@ variable "b" {
 			},
 			want: `monitor "a" {
   description = "Monitor A"
-
   threshold {
     critical = 100
     recovery = 10
