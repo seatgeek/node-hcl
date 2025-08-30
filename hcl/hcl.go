@@ -247,7 +247,7 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 	bBlockMap := blockToMap(bBlocks)
 
 	// add all blocks from a and check if they are in b
-	for _, aBlock := range aBlocks {
+	for i, aBlock := range aBlocks {
 		blockKey := formatBlockKey(aBlock)
 		outBlock := aBlock
 		bBlock, found := bBlockMap[blockKey]
@@ -258,10 +258,19 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 
 			// merge the attributes and blocks of the two blocks
 			m.mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes(), outBlock.Body())
+
+			// format the attributes
 			if len(outBody.Attributes()) > 0 {
 				outBody.AppendNewline()
 			}
+
+			// merge the nested blocks
 			m.mergeBlocks(aBlock.Body().Blocks(), bBlock.Body().Blocks(), outBlock.Body())
+
+			// format the blocks
+			if i == len(bBlocks)-1 && len(outBlock.Body().Blocks()) > 1 {
+				outBody.AppendNewline()
+			}
 		}
 
 		outBlocks = append(outBlocks, outBlock)
