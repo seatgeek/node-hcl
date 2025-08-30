@@ -5,6 +5,15 @@
 import { merge } from "./hcl";
 
 describe("merge", () => {
+  it("should merge simple key values", async () => {
+    const a = `foo = "bar"`;
+    const b = `foo = "baz"`;
+
+    const expected = `foo = "baz"
+`;
+    const actual = await merge(a, b);
+    expect(actual).toBe(expected);
+  });
   it("should merge two hcl strings", async () => {
     const a = `variable "a" {
   type        = string
@@ -22,13 +31,11 @@ describe("merge", () => {
   description = "Variable A"
   default     = "a"
 }
-
 variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`;
+}`;
 
     const out = await merge(a, b);
     expect(out).toBe(expected);
@@ -46,8 +53,7 @@ variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`;
+}`;
 
     const actual = await merge(a, b);
     expect(actual).toBe(expected);
@@ -122,7 +128,6 @@ variable "b" {
     },
   }
 }
-
 `;
     const options = { mergeMapKeys: true };
     const actual = await merge(a, b, options);

@@ -27,6 +27,18 @@ func TestMerge(t *testing.T) {
 		wantErr error
 	}{
 		{
+			name: "merge simple key values",
+			input: input{
+				a: `foo = "bar"
+some_value = 10
+`,
+				b: `foo = "baz"`,
+			},
+			want: `foo        = "baz"
+some_value = 10
+`,
+		},
+		{
 			name: "merge simple",
 			input: input{
 				a: `variable "a" {
@@ -45,13 +57,11 @@ func TestMerge(t *testing.T) {
   description = "Variable A"
   default     = "a"
 }
-
 variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`,
+}`,
 			wantErr: nil,
 		},
 		{
@@ -77,7 +87,6 @@ variable "b" {
   override    = true
   type        = string
 }
-
 `,
 			wantErr: nil,
 		},
@@ -110,7 +119,6 @@ variable "b" {
     warning  = 80
   }
 }
-
 `,
 			wantErr: nil,
 		},
@@ -149,7 +157,6 @@ variable "b" {
     }
   }
 }
-
 `,
 		},
 		{
@@ -229,7 +236,6 @@ variable "b" {
     var_key      = var.value
   }
 }
-
 `,
 		},
 	}
