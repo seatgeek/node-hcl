@@ -258,6 +258,9 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 
 			// merge the attributes and blocks of the two blocks
 			m.mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes(), outBlock.Body())
+			if len(outBody.Attributes()) > 0 {
+				outBody.AppendNewline()
+			}
 			m.mergeBlocks(aBlock.Body().Blocks(), bBlock.Body().Blocks(), outBlock.Body())
 		}
 
@@ -279,7 +282,6 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 
 	for i, block := range outBlocks {
 		outBody.AppendBlock(block)
-		outBody.AppendNewline()
 
 		// append extra newline for spacing between blocks, but not at the EOF
 		if i < lastIndex {
