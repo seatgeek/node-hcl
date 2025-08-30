@@ -27,6 +27,15 @@ func TestMerge(t *testing.T) {
 		wantErr error
 	}{
 		{
+			name: "merge simple key values",
+			input: input{
+				a: `foo = "bar"`,
+				b: `foo = "baz"`,
+			},
+			want: `foo = "baz"
+`,
+		},
+		{
 			name: "merge simple",
 			input: input{
 				a: `variable "a" {
