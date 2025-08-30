@@ -57,13 +57,11 @@ some_value = 10
   description = "Variable A"
   default     = "a"
 }
-
 variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`,
+}`,
 			wantErr: nil,
 		},
 		{

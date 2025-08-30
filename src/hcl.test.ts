@@ -31,13 +31,11 @@ describe("merge", () => {
   description = "Variable A"
   default     = "a"
 }
-
 variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`;
+}`;
 
     const out = await merge(a, b);
     expect(out).toBe(expected);
@@ -55,8 +53,7 @@ variable "b" {
   type        = string
   description = "Variable B"
   default     = "b"
-}
-`;
+}`;
 
     const actual = await merge(a, b);
     expect(actual).toBe(expected);
