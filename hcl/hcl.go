@@ -233,29 +233,15 @@ func (m *Merger) mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrit
 	out := hclwrite.NewFile()
 
 	m.mergeAttrs(aFile.Body().Attributes(), bFile.Body().Attributes(), out.Body())
-	outBlocks := m.mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks())
+	m.mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks(), out.Body())
 
-	// formatting of the file
-	lastIndex := len(outBlocks) - 1
-
-	for i, block := range outBlocks {
-		out.Body().AppendBlock(block)
-		out.Body().AppendNewline()
-
-		// append extra newline for spacing between blocks, but not at the EOF
-		if i < lastIndex {
-			out.Body().AppendNewline()
-		}
-	}
-
-	// return the formatted file
 	return out
 }
 
 // mergeBlocks merges two blocks together, a block is identified by its type and labels, e.g.
 // type "label" { ... }
 // or type { ... }
-func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block) []*hclwrite.Block {
+func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Block, outBody *hclwrite.Body) {
 	outBlocks := make([]*hclwrite.Block, 0)
 	aBlockMap := blockToMap(aBlocks)
 	bBlockMap := blockToMap(bBlocks)
@@ -272,13 +258,7 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 
 			// merge the attributes and blocks of the two blocks
 			m.mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes(), outBlock.Body())
-			outNestedBlocks := m.mergeBlocks(aBlock.Body().Blocks(), bBlock.Body().Blocks())
-
-			// append nested blocks
-			for _, nestedBlock := range outNestedBlocks {
-				outBlock.Body().AppendNewline()
-				outBlock.Body().AppendBlock(nestedBlock)
-			}
+			m.mergeBlocks(aBlock.Body().Blocks(), bBlock.Body().Blocks(), outBlock.Body())
 		}
 
 		outBlocks = append(outBlocks, outBlock)
@@ -294,7 +274,18 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 		}
 	}
 
-	return outBlocks
+	// formatting of the body
+	lastIndex := len(outBlocks) - 1
+
+	for i, block := range outBlocks {
+		outBody.AppendBlock(block)
+		outBody.AppendNewline()
+
+		// append extra newline for spacing between blocks, but not at the EOF
+		if i < lastIndex {
+			outBody.AppendNewline()
+		}
+	}
 }
 
 func parseBytes(bytes []byte) (*hclwrite.File, error) {
