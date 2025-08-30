@@ -75,7 +75,7 @@ func (m *Merger) mergeTokens(aTokens hclwrite.Tokens, bTokens hclwrite.Tokens) (
 // and are identified by their key, e.g.
 // key = value
 // or key = { ... }
-func (m *Merger) mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite.Attribute) map[string]hclwrite.Tokens {
+func (m *Merger) mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[string]*hclwrite.Attribute, outBody *hclwrite.Body) {
 	outAttr := make(map[string]hclwrite.Tokens)
 
 	for key, aValue := range aAttr {
@@ -113,7 +113,17 @@ func (m *Merger) mergeAttrs(aAttr map[string]*hclwrite.Attribute, bAttr map[stri
 		}
 	}
 
-	return outAttr
+	// sort and add attributes
+	keys := make([]string, 0, len(outAttr))
+	for key := range outAttr {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		outBody.SetAttributeRaw(key, outAttr[key])
+	}
 }
 
 // objectForTokensMap is the inverse of hclwrite.TokensForObject, only merges the top level keys, but not the values of the keys.
@@ -222,29 +232,10 @@ func objectForTokensMap(tokens hclwrite.Tokens) (map[string]hclwrite.ObjectAttrT
 func (m *Merger) mergeFiles(aFile *hclwrite.File, bFile *hclwrite.File) *hclwrite.File {
 	out := hclwrite.NewFile()
 
-	aBody := aFile.Body()
-	bBody := bFile.Body()
-	outAttributes := m.mergeAttrs(aBody.Attributes(), bBody.Attributes())
-	outBlocks := m.mergeBlocks(aBody.Blocks(), bBody.Blocks())
+	m.mergeAttrs(aFile.Body().Attributes(), bFile.Body().Attributes(), out.Body())
+	outBlocks := m.mergeBlocks(aFile.Body().Blocks(), bFile.Body().Blocks())
 
 	// formatting of the file
-	if len(outAttributes) > 0 {
-		keys := make([]string, 0, len(outAttributes))
-		for key := range outAttributes {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		for _, key := range keys {
-			out.Body().SetAttributeRaw(key, outAttributes[key])
-		}
-
-		// Add newline after attributes if we have blocks too
-		if len(outBlocks) > 0 {
-			out.Body().AppendNewline()
-		}
-	}
-
 	lastIndex := len(outBlocks) - 1
 
 	for i, block := range outBlocks {
@@ -280,22 +271,8 @@ func (m *Merger) mergeBlocks(aBlocks []*hclwrite.Block, bBlocks []*hclwrite.Bloc
 			outBlock = hclwrite.NewBlock(aBlock.Type(), aBlock.Labels())
 
 			// merge the attributes and blocks of the two blocks
-			aBlockBody := aBlock.Body()
-			bBlockBody := bBlock.Body()
-			outAttributes := m.mergeAttrs(aBlockBody.Attributes(), bBlockBody.Attributes())
-			outNestedBlocks := m.mergeBlocks(aBlockBody.Blocks(), bBlockBody.Blocks())
-
-			// sort and add attributes
-			keys := make([]string, 0, len(outAttributes))
-			for key := range outAttributes {
-				keys = append(keys, key)
-			}
-
-			sort.Strings(keys)
-
-			for _, key := range keys {
-				outBlock.Body().SetAttributeRaw(key, outAttributes[key])
-			}
+			m.mergeAttrs(aBlock.Body().Attributes(), bBlock.Body().Attributes(), outBlock.Body())
+			outNestedBlocks := m.mergeBlocks(aBlock.Body().Blocks(), bBlock.Body().Blocks())
 
 			// append nested blocks
 			for _, nestedBlock := range outNestedBlocks {
