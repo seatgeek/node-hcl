@@ -7,7 +7,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": "18 || 20"
+    "node": "18 || 20 || 22"
   },
   "publishConfig": {
     "access": "public",
